@@ -1,0 +1,401 @@
+
+--------------------------------------------------------------------------
+APPENDIX
+--------------------------------------------------------------------------
+SQL CODE
+
+CREATE DATABASE IF NOT EXISTS StudentGradingSystem;
+USE StudentGradingSystem;
+DROP TABLE Deparment;
+CREATE TABLE IF NOT EXISTS Department(
+deptId INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+deptName VARCHAR(20),
+CONSTRAINT one_name UNIQUE (DeptName)
+);
+
+DROP TABLE Students;
+
+CREATE TABLE IF NOT EXISTS Students(
+studentID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+firstName VARCHAR(20),
+lastName VARCHAR(20),
+email VARCHAR(40),
+deptFK INT,
+CONSTRAINT one_name UNIQUE (Email),
+CONSTRAINT fk_Dept FOREIGN KEY (deptFK) REFERENCES Department(deptId) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+INSERT INTO Students (firstName,lastName,email) -- NO studentID
+VALUES
+('Parth','Desai','padesai@eden.rutgers.edu');
+
+SELECT * FROM Students;
+
+CREATE TABLE IF NOT EXISTS Courses(
+courseID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+courseName VARCHAR(50),
+credits INT,
+deptFK INT,
+CONSTRAINT one_name UNIQUE (courseName),
+CONSTRAINT fk_Dept1 FOREIGN KEY (deptFK) REFERENCES Department(deptId) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+INSERT INTO Courses (courseName,credits) 
+VALUES
+('Software Engineering',3),
+('Oprating Systems',4),
+('Algorithm Analysis',3),
+('Digital Electronics',4),
+('Electronic Devices',3),
+('Digital System Design',3);
+
+CREATE TABLE IF NOT EXISTS Semester(
+semesterID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+semDate Date,
+CONSTRAINT one_date UNIQUE (semDate)
+);
+
+INSERT INTO Semester (semDate)
+VALUES
+('2013-08-12');
+
+CREATE TABLE IF NOT EXISTS StudentCourseGrade(
+gradeID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+letterGrade VARCHAR(20),
+courseFK INT,
+studentFK INT,
+CONSTRAINT fk_course
+FOREIGN KEY (courseFK) REFERENCES Courses(courseId) ON DELETE NO ACTION ON UPDATE NO ACTION,
+CONSTRAINT fk_student
+FOREIGN KEY (studentFK) REFERENCES Students(studentId) ON DELETE NO ACTION ON UPDATE CASCADE,
+CONSTRAINT one_student_one_course_one_grade UNIQUE (studentFK,CourseFK,letterGrade)
+);
+
+INSERT INTO StudentCourseGrade(studentFK,courseFK,letterGrade)
+VALUES
+((SELECT studentId FROM Students WHERE email='padesai@eden.rutgers.edu'),
+(SELECT courseId FROM Courses WHERE courseName ='Principles of Information and Data Management'),'A');
+
+
+INSERT INTO StudentCourseGrade(studentFK,courseFK,letterGrade)
+VALUES
+((SELECT studentId FROM Students WHERE email='padesai@eden.rutgers.edu'),
+(SELECT courseId FROM Courses WHERE courseName ='Operating Systems'),'A'),
+
+((SELECT studentId FROM Students WHERE email='padesai@eden.rutgers.edu'),
+(SELECT courseId FROM Courses WHERE courseName ='Digital Electronics'),'B+'),
+
+((SELECT studentId FROM Students WHERE email='padesai@eden.rutgers.edu'),
+(SELECT courseId FROM Courses WHERE courseName ='Electronic Devices'),'A');
+
+
+CREATE TABLE IF NOT EXISTS StudentsSemester(
+semesterFK INT,
+studentFK INT,
+CONSTRAINT fk_student1
+FOREIGN KEY (studentFK) REFERENCES Students(studentId) ON DELETE NO ACTION ON UPDATE CASCADE,
+CONSTRAINT fk_semester1
+FOREIGN KEY (semesterFK) REFERENCES Semester(semesterId) ON DELETE NO ACTION ON UPDATE CASCADE,
+CONSTRAINT one_pair UNIQUE (studentFK,semesterFK)
+);
+
+
+INSERT INTO StudentsSemester(semesterFK,studentFK)
+VALUES
+((SELECT studentId FROM Students WHERE email='padesai@eden.rutgers.edu'),
+(SELECT semesterId FROM Semester WHERE semDate ='2013-08-12'));
+
+Drop table SemestersCourse;
+CREATE TABLE IF NOT EXISTS SemestersCourse(
+courseFK INT,
+semesterFK INT,
+CONSTRAINT fk_student2
+FOREIGN KEY (courseFK) REFERENCES Courses(courseId) ON DELETE NO ACTION ON UPDATE CASCADE,
+CONSTRAINT fk_semester2
+FOREIGN KEY (semesterFK) REFERENCES Semester(semesterId) ON DELETE NO ACTION ON UPDATE CASCADE ,
+CONSTRAINT one_pair UNIQUE (courseFK,semesterFK) 
+);
+
+INSERT INTO SemestersCourse(semesterFK,courseFK)
+VALUES
+((SELECT courseId FROM Courses WHERE courseName = 'Principles of Information and Data Management'),
+(SELECT semesterId FROM Semester WHERE semDate ='2013-08-12'));
+
+SELECT * FROM Courses LEFT JOIN SemestersCourse ON courseFK = courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON courseFK = courseID;
+SELECT * FROM Students LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Courses LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON courseFK = courseID ORDER BY letterGrade DESC;
+SELECT * FROM Students LEFT JOIN StudentsSemester ON studentFK = studentID LEFT JOIN Semester ON semesterFK = semesterID ORDER BY semDate DESC;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT firstName,lastName,email,semDate,GROUP_CONCAT(courseName) AS Courses,GROUP_CONCAT(letterGrade) AS Grades, SUM(StudentCourseGrade.numericGrade*credits)/SUM(credits) AS CUM_GPA FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID GROUP BY eamil,semDate;
+
+---------------------------------------------------------------------------
+APPENDIX
+---------------------------------------------------------------------------
+
+3.3
+-------------
+INSERT INTO Students (firstName,lastName,email) 
+VALUES
+('?','?','?');
+
+This query will be used by the administrator to store a new student in the database. It needs firstName, lastName strings coming from WebForm and an email coming from a cookie. 
+The result would be used to store and later display information corresponding to the student like the courses he/she has taken and the grades that he/she got for them.
+
+
+INSERT INTO Courses (courseName,credits,deptFK) 
+VALUES
+('?','?',SELECT deptID FROM Department WHERE deptName = '?');  
+
+This query will be used by the administrator to store a new course in the database corresponding  a department. It will need courseName, credits, and deptName strings coming from the web form. 
+The result would be used to store and display information such as the courses taken by a student, or courses offered during a semester. 
+
+INSERT INTO Semester (semDate)
+VALUES
+('?');
+
+This query will be used by the administrator to add a new semester to the table semester in the database. It will need regexp semDate coming from the web form. 
+The result will be to associatively store and later display information such as students enrolled during a semester and courses offered during a particular semester.
+
+INSERT INTO StudentCourseGrade(studentFK,courseFK,letterGrade)
+VALUES
+((SELECT studentId FROM Students WHERE email='?'),
+(SELECT courseId FROM Courses WHERE courseName ='?'),'?');
+
+This query will be used to store courses taken by students and the respective grades for the courses for the student. It will need regexp email coming from a cookie and a string courseName and a regexp letterGrade both coming from a web form.
+The result will be used to associatively store and later display courses taken by students and the grades received by them on those courses. 
+
+INSERT INTO StudentsSemester(semesterFK,studentFK)
+VALUES
+((SELECT studentId FROM Students WHERE email='?'),
+(SELECT semesterId FROM Semester WHERE semDate ='?'));
+
+This query will be used to store students enrolled during a particular semester. It will need string email coming from a cookie as well as regexp semDate coming from a web form. 
+The result would be used to later join the table other tables studentcoursegrade and display information such as list of students enrolled and the grade they received in the courses taken by them during particular semester or to simply to display the list of students enrolled during the semester and the courses taken by them. 
+
+SELECT * FROM Courses LEFT JOIN SemestersCourse ON courseFK = courseID LEFT JOIN Semester ON semesterFK = semesterID;
+
+This query will be used to display all courses offered during a particular semester.
+The result will be used to allow the public to see the courses offered by the university during a semester. It could also be used by students to see and register for courses offered by the university for a particular semester. 
+
+SELECT * FROM Students LEFT JOIN Department ON deptFK = deptId;
+
+This query will be sued to display the list of students enrolled in a particular department.
+The result will used by the public user to see the list of students in a department. It would be used by students to find their collegues' emailID so that they can contact them and network with them.
+
+SELECT * FROM Courses LEFT JOIN Department ON deptFK = deptId;
+
+This query will be used to display the list of courses offered by a particular department.
+The result will be used to help end users (public, students, administrators) distinguish coureses offered by different departments and would thus allow them to narrow down their search to courses offered by the department that they are interested in.
+
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON courseFK = courseID;
+
+This query will be used by the administrator to allow him/her to see the list of students, courses taken by each student, and the grade received by each student on the courses taken by them. 
+The result will be used to help the administrator determine some outcome based on the students profile they see. For example, a professor, an example of an administrator, might be able to judge whether they will be able to write a good recommedation letter for the student. 
+
+SELECT firstName,lastName,email,semDate,GROUP_CONCAT(courseName) AS Courses,GROUP_CONCAT(letterGrade) AS Grades, SUM(StudentCourseGrade.numericGrade*credits)/SUM(credits) AS CUM_GPA FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = (SELECT StudentID FROM Students WHERE email='?') LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID GROUP BY semDate;
+
+This query will be used by the student to his/her grades and GPA in a semester by semester breakdown. The query will need the string email coming from a cookie. 
+The result serve a transcript for the student that executes the query. 
+
+
+4.1
+-------------------
+Data Validation
+filter_var($email, FITLER_VALIDATE_EMAIL)
+filter_var($score, FITLER_VALIDATE_INT)
+strlength($user)
+
+INSERT INTO Students (firstName,lastName,email) -- NO studentID
+VALUES
+('Parth','Desai','padesai@eden.rutgers.edu');
+
+I would use the function filter_var($email, FILTER_VALIDATE_EMAIL) for validating the provided email. I would also validate the parameters $firstName and $lastName using the function strlength. 
+
+I would then sanitate the query using the fuction filter_var($email, FILER_VALIDATE_EMAIL) to make certain the formatting of the email. 
+I would also sanitate the query using the function strip_tags($query) to remove html tags from the query.
+I would use the following doublet of functions on the $query which represented by $message in the functions below, to rid the query of any unwanted special characters.
+$unwanted = array("<", "\\", "\'", "\"", "(", "-- ", ";");
+$message = str_replace($unwanted, "", $message);
+
+I would also sanitate the query by using the function mysqli_real_escape_string($connection,$post) on the query to render the query harmless of suspicious characters
+
+
+INSERT INTO Courses (courseName,credits) 
+VALUES
+('Software Engineering',3);  
+
+I would validate the parameter 
+I would use the function filter_var($credits, FILTER_VALIDATE_INT) for validating the parameter credits.
+
+I would sanitate the query using the $strip_tags($message) on the query to remove the html tags around the $message.
+I would use the following doublet of functions on the $query which represented by $message in the functions below, to rid the query of any unwanted special characters.
+$unwanted = array("<", "\\", "\'", "\"", "(", "-- ", ";");
+$message = str_replace($unwanted, "", $message);
+
+I would also sanitate the query by using the function mysqli_real_escape_string($connection,$post) on the query to render the query harmless of suspicious characters.
+
+INSERT INTO Semester (semDate)
+VALUES
+('2013-08-12');
+
+I would validate the parameter semDate using the function filter_var($semDate,FILTER_VALIDATE_REGEXP, $REGEXP).
+
+I would sanitate the query using the function $strip_tags($message) to remove the html tags from the query. 
+I would use the following doublet of functions on the $query which represented by $message in the functions below, to rid the query of any unwanted special characters.
+$unwanted = array("<", "\\", "\'", "\"", "(", "-- ", ";");
+$message = str_replace($unwanted, "", $message);
+
+I would also sanitate the query by using the function mysqli_real_escape_string($connection,$post) on the query to render the query harmless of suspicious characters.
+
+INSERT INTO StudentCourseGrade(studentFK,courseFK,letterGrade)
+VALUES
+((SELECT studentId FROM Students WHERE email='padesai@eden.rutgers.edu'),
+(SELECT courseId FROM Courses WHERE courseName ='Principles of Information and Data Management'),'A');
+
+
+I would validate the parameter letterGrade using the function strlength($letterGrade). I would expect the letterGrade length to be 2 characters. 
+I would validate the parameters courseName, and email by sending queries into the database for getting all courseNames, and all students' emails respectively and then finding matching entries, in the received list of courses, and student emails respectively for the courseName and email entered by the user respectively. 
+I would also validate the parameter email by using the function filter_var($email, FILTER_VALIDATE_EMAIL).
+
+I would sanitate the query with the function strip_tags($message) to remove the html tags from the query. 
+I would use the following doublet of functions on the $query which represented by $message in the functions below, to rid the query of any unwanted special characters.
+$unwanted = array("<", "\\", "\'", "\"", "(", "-- ", ";");
+$message = str_replace($unwanted, "", $message);
+
+I would also sanitate the query by using the function mysqli_real_escape_string($connection,$post) on the query to render the query harmless of suspicious characters.
+
+
+INSERT INTO StudentsSemester(semesterFK,studentFK)
+VALUES
+((SELECT studentId FROM Students WHERE email='padesai@eden.rutgers.edu'),
+(SELECT semesterId FROM Semester WHERE semDate ='2013-08-12'));
+
+I would validate the paramters email and semDate using the functions filter_var($email, FILTER_VALIDATE_EMAIL) and filter_var($semDate, FILTER_VALIDATE_DATE). 
+I would then send queries to the database for all emails and for all semDates and would then would try to find matching entries in the lists corresponding to the paramters entered by the users respectively.
+
+I would sanitate the query with the function strip_tags($message). 
+I would use the following doublet of functions on the $query which represented by $message in the functions below, to rid the query of any unwanted special characters.
+$unwanted = array("<", "\\", "\'", "\"", "(", "-- ", ";");
+$message = str_replace($unwanted, "", $message);
+
+I would also sanitate the query by using the function mysqli_real_escape_string($connection,$post) on the query to render the query harmless of suspicious characters.
+
+4.2 SELECT statments
+------------------------
+SELECT * FROM Courses LEFT JOIN SemestersCourse ON courseFK = courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON courseFK = courseID;
+SELECT * FROM Students LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Courses LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON courseFK = courseID ORDER BY letterGrade DESC;
+SELECT * FROM Students LEFT JOIN StudentsSemester ON studentFK = studentID LEFT JOIN Semester ON semesterFK = semesterID ORDER BY semDate DESC;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT firstName,lastName,email,semDate,GROUP_CONCAT(courseName) AS Courses,GROUP_CONCAT(letterGrade) AS Grades, SUM(StudentCourseGrade.numericGrade*credits)/SUM(credits) AS CUM_GPA FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID GROUP BY email,semDate;
+
+I would validate the emails that are returned as results of any of the above queries using the function, filter_var($email, FILTER_VALIDATE_EMAIL), to make sure a valid email is returned. 
+I would validate all integer parameters using the function filter_var($integer, FILTER_VALIDATE_INT), to make sure that a column that should display integers as results, return integers.
+I would also validate all string and regular expression parameters using the fucntion filter_var($string, FILTER_VALIDATE_REGEXP, $REGEXP).
+I would also validate the paramter GPA using the function filter_var($float, FILTER_VALIDATE_FLOAT, $Option), by specifying the range of values 0.0 to 4.0 as part of the $Option.
+
+I would sanitate all select statements using the function strip_tags($message) to remove all the html tags from the query to be executed on the database.
+I would use the following doublet of functions on all SELECT statements to rid the queries of any unwanted special characters.
+$unwanted = array("<", "\\", "\'", "\"", "(", "-- ", ";");
+$message = str_replace($unwanted, "", $message);
+I would also sanitate all select statements using the function mysqli_real_escape_string($connection, $post) to render the queries harmless of suspicious characters.  
+
+Before sanitizing the result of the quries I would use the function htmlspecialchars_decode($latestMessage) on the data recieved as $latestMessage from the database, to undo any earlier sanitation that was performed or not performed. I would then sanitize the result myself by applying the function htmlspecialchars($post) on the results of the queries to render the result to be posted on the web page harmless against html. I would thus avoid displaying inconsistent message on the html page.
+
+4.3
+-------------------------
+My login session would be sending two cookies, sessionID and userEmail. The userID and userEmail will include an userID and userEmail. The userID will contain an integerID unique to the user and userEmail will contain the email address of the user. 
+Cookie altering will be prevented by using the function setcookies for setting the values of cookies and for setting the httponly and secure flags to true. 
+Since the userID will be unique integer, and the userEmail will also be unique, a combination of both cookies will help the site administrator identify the user. 
+
+4.4
+-----------------------
+I secured the communication by including an encryption function in the index.php file and also including a decryption function in the result.php file. The encryption functio will encrypt the user entered passowrd. The decryption function will decrypt that password before sending it to the database to verify wether the user is allowed to login to our site 
+I made sure that our users passwords are unique to our database, by including a function validate_password() on the sign up page. This function requires the users signing up to have a password that follows specific rules which are unique to our site. 
+
+4.5
+---------------------
+I would have 3 types of SQL users: public, student, and administrator. 
+
+Public user would be able to see the list of students registered in the university as well as courses offered by the different departments of the university. The list of queries that the public users will be able to execute are:
+SELECT * FROM Courses LEFT JOIN SemestersCourse ON courseFK = courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT * FROM Students LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Courses LEFT JOIN Department ON deptFK = deptId;
+
+The priviliges that a public user of the Desai University webpage would have are described by the following grant statements. 
+GRANT SELECT ON studentgradingsystem.SemestersCourse TO 'univPublic';
+GRANT SELECT ON studentgradingsystem.Courses TO 'univPublic';
+GRANT SELECT ON studentgradingsystem.Students TO 'univPublic';
+GRANT SELECT ON studentgradingsystem.Department TO 'univPublic';
+GRANT SELECT ON studentgradingsystem.Semester TO 'univPublic';
+
+The logged in student would be able to do everything that a public user can. Additionally, the logged in student can see all classes that he/she can register for as well as a semeseter by semester history of all courses and their respective grades. They would also be able to see their calculated GPA. The list of queries that the students will be able to execute are: 
+
+SELECT * FROM Courses LEFT JOIN SemestersCourse ON courseFK = courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT * FROM Students LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Courses LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = (SELECT StudentID FROM Students WHERE email='?') LEFT JOIN Courses ON courseFK = courseID;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = (SELECT StudentID FROM Students WHERE email='?') LEFT JOIN Courses ON courseFK = courseID ORDER BY letterGrade DESC;
+SELECT * FROM Students LEFT JOIN StudentsSemester ON StudentFK = (SELECT StudentID FROM Students WHERE email='?') LEFT JOIN Semester ON semesterFK = semesterID ORDER BY semDate DESC;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = (SELECT StudentID FROM Students WHERE email='?') LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT firstName,lastName,email,semDate,GROUP_CONCAT(courseName) AS Courses,GROUP_CONCAT(letterGrade) AS Grades, SUM(StudentCourseGrade.numericGrade*credits)/SUM(credits) AS CUM_GPA FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = (SELECT StudentID FROM Students WHERE email='?') LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID GROUP BY semDate;
+
+GRANT SELECT ON studentgradingsystem.SemestersCourse TO 'univStudent';
+GRANT SELECT ON studentgradingsystem.Courses TO 'univStudent';
+GRANT SELECT ON studentgradingsystem.Students TO 'univStudent';
+GRANT SELECT ON studentgradingsystem.Department TO 'univStudent';
+GRANT SELECT ON studentgradingsystem.Semester TO 'univStudent';
+GRANT SELECT ON studentgradingsystem.StudentsSemester TO 'univStudent';
+GRANT SELECT ON studentgradingsystem.StudentCourseGrade TO 'univStudent';
+
+
+The administrator would be able to do everything that a student can. Additionally, the administrator can see every detail about every student and would be able to enter new courses, students, as well as grades for existing students in the system. The list of queries that the administrator can run are shown below. 
+The administrator would be able to execute the following queries.
+INSERT INTO Students (firstName,lastName,email) 
+VALUES
+('?','?','?');
+
+INSERT INTO Courses (courseName,credits) 
+VALUES
+('?',?);  
+
+INSERT INTO Semester (semDate)
+VALUES
+('?');
+
+INSERT INTO StudentCourseGrade(studentFK,courseFK,letterGrade)
+VALUES
+((SELECT studentId FROM Students WHERE email='?'),
+(SELECT courseId FROM Courses WHERE courseName ='?'),'?');
+
+INSERT INTO StudentsSemester(semesterFK,studentFK)
+VALUES
+((SELECT studentId FROM Students WHERE email='?'),
+(SELECT semesterId FROM Semester WHERE semDate ='?'));
+
+SELECT * FROM Courses LEFT JOIN SemestersCourse ON courseFK = courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT * FROM Students LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Courses LEFT JOIN Department ON deptFK = deptId;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON courseFK = courseID;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON courseFK = courseID ORDER BY letterGrade DESC;
+SELECT * FROM Students LEFT JOIN StudentsSemester ON StudentFK = StudentID LEFT JOIN Semester ON semesterFK = semesterID ORDER BY semDate DESC;
+SELECT * FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID;
+SELECT firstName,lastName,email,semDate,GROUP_CONCAT(courseName) AS Courses,GROUP_CONCAT(letterGrade) AS Grades, SUM(StudentCourseGrade.numericGrade*credits)/SUM(credits) AS CUM_GPA FROM Students LEFT JOIN StudentCourseGrade ON StudentFK = StudentID LEFT JOIN Courses ON StudentCourseGrade.courseFK = courseID LEFT JOIN SemestersCourse ON SemestersCourse.courseFK=courseID LEFT JOIN Semester ON semesterFK = semesterID GROUP BY email,semDate;
+
+The administrator would have the privileges indicated the following GRANT statement.
+GRANT ALL PRIVILEGES studentgradingsystem.* TO univAdmin;
+
+
+Data Sanitation
+Prepared statements
+strip_tags($message)
+filter_var($email)
+$unwanted
+str_replace($unwanted,"", $message);
+mysqli_real_escape_string($connection,$post); harmless against mySQL
+render suspicious characters harmless.
+htmlspecialchars($post)
